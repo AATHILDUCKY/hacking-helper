@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-[#1e1e1e] text-white">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📝 Markdown Notes - VS Code Style</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .prose pre {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.6rem;
+  border: 1px solid #ffffff; /* White border */
+  border-radius: 0.5rem;      /* Rounded corners */
+  overflow-x: auto;
+  position: relative;
+}
+
+.prose code {
+  background-color: #2d2d2d;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.3rem;
+}
+
+    .copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      font-size: 0.75rem;
+      background-color: #3b3b3b;
+      color: #fff;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      opacity: 0.8;
+    }
+
+    .copy-btn:hover {
+      opacity: 1;
+    }
+
+    code {
+      font-family: Consolas, Monaco, 'Courier New', monospace;
+    }
+
+    .vscode-box {
+      background-color: #1e1e1e;
+      border: 1px solid #2d2d2d;
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-8">
+
+  <div class="max-w-4xl mx-auto vscode-box">
+    <h1 class="text-3xl font-bold mb-6 text-cyan-400 text-center">🧠 VS Code Markdown Notes</h1>
+
+    <input
+      id="keywordInput"
+      type="text"
+      placeholder="🔍 Search notes with keywords (e.g. python, project)..."
+      class="w-full px-4 py-2 text-black rounded-md focus:outline-none focus:ring focus:border-blue-300 mb-6"
+    />
+
+    <div id="results" class="space-y-10 prose prose-invert max-w-none"></div>
+  </div>
+
+  <script>
+    const input = document.getElementById("keywordInput");
+    const resultsDiv = document.getElementById("results");
+    const md = window.markdownit({ highlight: str => hljs.highlightAuto(str).value });
+
+    let debounceTimer;
+
+    input.addEventListener("input", () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        searchNotes(input.value.trim());
+      }, 400);
+    });
+
+    async function searchNotes(keywords) {
+      if (!keywords) {
+        resultsDiv.innerHTML = "";
+        return;
+      }
+
+      resultsDiv.innerHTML = "<p class='text-gray-400'>Searching...</p>";
+
+      try {
+        const response = await fetch(`http://localhost:8000/search?keywords=${encodeURIComponent(keywords)}`);
+        const data = await response.json();
+
+        if (!data.results.length) {
+          resultsDiv.innerHTML = "<p class='text-red-500'>❌ No notes found.</p>";
+          return;
+        }
+
+        resultsDiv.innerHTML = "";
+
+        data.results.forEach(note => {
+          const htmlContent = md.render(note.content);
+          const container = document.createElement("div");
+          container.className = "border-b border-gray-600 pb-8";
+
+          container.innerHTML = `
+            <h2 class="text-xl font-semibold text-indigo-300 mb-2">${note.filename}</h2>
+            <div>${htmlContent}</div>
+          `;
+
+          resultsDiv.appendChild(container);
+        });
+
+        addCopyButtons();
+      } catch (err) {
+        resultsDiv.innerHTML = "<p class='text-red-600'>⚠️ Failed to fetch. Is the backend running?</p>";
+      }
+    }
+
+    function addCopyButtons() {
+      const pres = document.querySelectorAll("pre > code");
+      pres.forEach(codeBlock => {
+        const pre = codeBlock.parentElement;
+        const btn = document.createElement("button");
+        btn.className = "copy-btn";
+        btn.innerText = "Copy";
+        btn.onclick = () => {
+          navigator.clipboard.writeText(codeBlock.innerText);
+          btn.innerText = "Copied!";
+          setTimeout(() => (btn.innerText = "Copy"), 1500);
+        };
+        pre.appendChild(btn);
+      });
+    }
+  </script>
+</body>
+</html>
