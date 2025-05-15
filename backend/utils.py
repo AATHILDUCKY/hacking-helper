@@ -3,7 +3,8 @@
 import os
 import markdown2
 
-NOTES_DIR = "notes"
+# Change this path to your own Obsidian notes folder
+NOTES_DIR = "/home/ducky/Documents/Obsidian Vault/ethical_hacking_notes"
 
 def load_notes():
     notes = []
@@ -22,11 +23,21 @@ def load_notes():
 def search_notes(keywords):
     keyword_list = [k.strip().lower() for k in keywords.split(",") if k.strip()]
     all_notes = load_notes()
-    matched = []
+
+    scored_notes = []
 
     for note in all_notes:
-        text = note["content"].lower()
-        if all(keyword in text for keyword in keyword_list):
-            matched.append(note)
+        content_lower = note["content"].lower()
+        matched_keywords = [kw for kw in keyword_list if kw in content_lower]
+        match_score = len(matched_keywords)
 
-    return matched
+        if match_score > 0:
+            note_copy = note.copy()
+            note_copy["match_score"] = match_score
+            note_copy["matched_keywords"] = matched_keywords
+            scored_notes.append(note_copy)
+
+    # Sort by match_score descending, then filename ascending
+    scored_notes.sort(key=lambda note: (-note["match_score"], note["filename"]))
+
+    return scored_notes
